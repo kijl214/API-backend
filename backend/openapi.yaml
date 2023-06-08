@@ -1,0 +1,228 @@
+openapi: 3.0.0
+info:
+  title: Cat API
+  version: 1.0.0
+  description: REST API for managing cats
+servers:
+  - url: http://localhost:3001
+paths:
+  /cats/get:
+    get:
+      summary: Get all cats
+      description: Returns a list of all cats.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cat'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+
+  /cats/post:
+    post:
+      summary: Add a new cat
+      description: Adds a new cat to the database.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cat'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: The ID of the new cat.
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+components:
+  schemas:
+    Cat:
+      type: object
+      properties:
+        name:
+          type: string
+        breed:
+          type: string
+        age:
+          type: integer
+          minimum: 0
+          maximum: 30
+      required:
+        - name
+        - breed
+        - age
+        
+
+  /cats/put/{id}:
+    put:
+      summary: Update an existing cat
+      description: Updates an existing cat in the database.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: The ID of the cat to update.
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Cat'
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+
+  /cats/delete/{id}:
+    delete:
+      summary: Delete an existing cat
+      description: Deletes an existing cat from the database.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: The ID of the cat to delete.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: The error message.
+components:
+  schemas:
+    Cat:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: The cat's ID.
+        name:
+          type: string
+          description: The cat's name.
+        age:
+          type: integer
+          description: The cat's age.
+        breed:
+          type: string
+          description: The cat's breed.
+  /staff/login:
+    post:
+      summary: Staff login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+              required:
+                - email
+                - password
+      responses:
+        200:
+          description: OK
+        401:
+          description: Unauthorized
+        500:
+          description: Internal Server Error
+  /staff/signup:
+    post:
+      summary: Staff sign up
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                signupCode:
+                  type: string
+              required:
+                - name
+                - email
+                - password
+                - signupCode
+      responses:
+        200:
+      description: OK
+        401:
+          description: Unauthorized
+        500:
+          description: Internal Server Error
