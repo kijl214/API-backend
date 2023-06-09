@@ -4,6 +4,7 @@ import bodyParser from 'body-parser';
 import swaggerUi from 'swagger-ui-express';
 import { Request, Response, NextFunction } from 'express';
 import YAML from 'yamljs';
+import multer from 'multer';
 
 const swaggerDocument = YAML.load('./openapi.yaml');
 const app = express();
@@ -66,28 +67,55 @@ app.get('/cats/get', (req: express.Request, res: express.Response) => {
       console.error('Error executing MySQL query: ' + error.stack);
       res.status(500).json({ error: 'Unable to retrieve cats' });
     } else {
-      res.json(results);
+      // Loop through the results and process each row
+      const cats = results.map((cat: any) => {
+        if (!cat.image) {
+          console.error('Error: image data is missing for cat ' + cat.id);
+          return null;
+        }
+      
+        // Convert the binary data to a base64-encoded string
+        const base64String = Buffer.from(cat.image).toString('base64');
+      
+        // Create a data URL from the base64-encoded string
+        const dataUrl = `data:image/jpeg;base64,${base64String}`;
+      
+        // Return a new object with the data URL
+        return {
+          id: cat.id,
+          name: cat.name,
+          age:cat.age,
+          breed:cat.breed,
+          picture: dataUrl
+        };
+      });
+      
+      // Remove null values from the array
+      const validCats = cats.filter((cat: any) => cat !== null);
+      
+      // Return the array of cat objects with the data URLs
+      res.json(validCats);
     }
   });
 });
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+
 // Endpoint for adding a new cat to the database
-app.post('/cats/post', requireLogin, (req: express.Request, res: express.Response) => {
+app.post('/cats/post', upload.single('image'), async (req: express.Request, res: express.Response) => {
   const { name, age, breed } = req.body;
-  if (typeof age !== 'number') {
-    res.status(400).json({ error: 'Age must be a number' });
-    return;
-  }
-  const query = 'INSERT INTO cats (name, age, breed) VALUES (?, ?, ?)';
-  const values = [name, age, breed];
-  connection.query(query, values, (error: any, result: any) => {
-    if (error) {
-      console.error('Error executing MySQL query: ' + error.stack);
-      res.status(500).json({ error: 'Unable to add cat' });
-    } else {
-      res.json({ id: result.insertId });
-    }
-  });
+  const image = req.file?.buffer;
+  try {
+    const query = 'INSERT INTO cats (name, age, breed, image) VALUES (?, ?, ?, ?)';
+    const values = [name, age, breed, image];
+    await connection.query(query, values);
+    res.status(200).json({ message: 'Cat added successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  } 
 });
 
 // Endpoint for updating an existing cat
