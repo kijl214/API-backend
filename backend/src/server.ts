@@ -119,11 +119,12 @@ app.post('/cats/post', upload.single('image'), async (req: express.Request, res:
 });
 
 // Endpoint for updating an existing cat
-app.put('/cats/put/:id', requireLogin, (req: express.Request, res: express.Response) => {
-  const { name, age, breed } = req.body;
+app.put('/cats/put/:id', upload.single('image'), requireLogin, (req: express.Request, res: express.Response) => {
+  const { name, age, breed} = req.body;
+  const image = req.file?.buffer;
   const { id } = req.params;
-  const query = 'UPDATE cats SET name = ?, age = ?, breed = ? WHERE id = ?';
-  const values = [name, age, breed, id];
+  const query = 'UPDATE cats SET name = ?, age = ?, breed = ?, image = ? WHERE id = ?';
+  const values = [name, age, breed,image, id];
   connection.query(query, values, (error: any, result: any) => {
     if (error) {
       console.error('Error executing MySQL query: ' + error.stack);
@@ -189,7 +190,40 @@ app.put('/staff/signup', (req: express.Request, res: express.Response) => {
   });
 });
 
+// Endpoint for staff login
+app.post('/user/login', (req: express.Request, res: express.Response) => {
+  const { username, password } = req.body;
+  const query = 'SELECT * FROM user WHERE username = ? AND password = ?';
+  const values = [username, password];
+  connection.query(query, values, (error: any, results: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to login' });
+    } else if (results.length === 0) {
+      res.status(401).json({ error: 'Invalid username or password' });
+    } else {
+      res.json({ message: 'Login successful' });
+    }
+  });
+});
 
+
+// Endpoint for staff sign up
+app.post('/user/signup', (req: express.Request, res: express.Response) => {
+  const { username, email, password, code, salt } = req.body;
+  const query = 'INSERT INTO user (username, email, password) VALUES (?, ?, ?)';
+  const values = [username, email, password];
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to update staff member' });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ error: 'Staff member not found' });
+    } else {
+      res.status(200).send(`Staff member Sign Up successfully.`);
+    }
+  });
+});
 
 
 
