@@ -6,9 +6,13 @@ import { Request, Response, NextFunction } from 'express';
 import YAML from 'yamljs';
 import multer from 'multer';
 
+
+const { OAuth2Client } = require('google-auth-library');
+const axios = require('axios');
 const swaggerDocument = YAML.load('./openapi.yaml');
 const app = express();
 const cors = require('cors');
+
 
 // Set up MySQL connection
 const connection = mysql.createConnection({
@@ -48,7 +52,7 @@ const requireLogin = (req: Request, res: Response, next: NextFunction) => {
   // Check if user is authenticated
   const isAuthenticated = true; // Replace with actual authentication logic
   if (isAuthenticated) {
-    // User is authenticated, continue to next middleware function or endpoint logic
+    // User is authenticated, continue to next
     next();
   } else {
     // User is not authenticated, return an error response
@@ -173,7 +177,7 @@ app.post('/staff/login', (req: express.Request, res: express.Response) => {
 });
 
 
-// Endpoint for staff sign up
+// staff sign up
 app.put('/staff/signup', (req: express.Request, res: express.Response) => {
   const { username, email, password, code, salt } = req.body;
   const query = 'UPDATE staff SET username = ?, email = ?, password = ?, salt = ?, code = NULL WHERE code = ?';
@@ -190,7 +194,7 @@ app.put('/staff/signup', (req: express.Request, res: express.Response) => {
   });
 });
 
-// Endpoint for staff login
+// user login
 app.post('/user/login', (req: express.Request, res: express.Response) => {
   const { username, password } = req.body;
   const query = 'SELECT * FROM user WHERE username = ? AND password = ?';
@@ -208,7 +212,7 @@ app.post('/user/login', (req: express.Request, res: express.Response) => {
 });
 
 
-// Endpoint for staff sign up
+// user sign up
 app.post('/user/signup', (req: express.Request, res: express.Response) => {
   const { username, email, password, code, salt } = req.body;
   const query = 'INSERT INTO user (username, email, password) VALUES (?, ?, ?)';
@@ -216,14 +220,77 @@ app.post('/user/signup', (req: express.Request, res: express.Response) => {
   connection.query(query, values, (error: any, result: any) => {
     if (error) {
       console.error('Error executing MySQL query: ' + error.stack);
-      res.status(500).json({ error: 'Unable to update staff member' });
+      res.status(500).json({ error: 'Unable to update user member' });
     } else if (result.affectedRows === 0) {
-      res.status(404).json({ error: 'Staff member not found' });
+      res.status(404).json({ error: 'User member not found' });
     } else {
-      res.status(200).send(`Staff member Sign Up successfully.`);
+      res.status(200).send(`User member Sign Up successfully.`);
     }
   });
 });
+
+
+// user google sign up
+app.post('/user/signup/google', (req: express.Request, res: express.Response) => {
+  const { codeResponse } = req.body;
+  const link = ('https://www.googleapis.com/oauth2/v3/userinfo?access_token='+codeResponse.access_token)
+  axios.get(link)
+  .then(response => {
+    console.log(response.data);
+
+    const query = 'INSERT INTO user (username, email) VALUES (?, ?)';
+    const values = [response.data.name, response.data.email];
+    connection.query(query, values, (error: any, result: any) => {
+      if (error) {
+        console.error('Error executing MySQL query: ' + error.stack);
+        res.status(500).json({ error: 'Unable to update user member' });
+      } else if (result.affectedRows === 0) {
+        res.status(404).json({ error: 'User member not found' });
+      } else {
+        res.status(200).send(`User member Sign Up successfully.`);
+      }
+    });
+  })
+  .catch(error => {
+    console.log(error);
+  });
+  //console.log(data);
+});
+
+
+
+// user login
+app.post('/user/login/google', (req: express.Request, res: express.Response) => {
+  const { codeResponse } = req.body;
+  const link = ('https://www.googleapis.com/oauth2/v3/userinfo?access_token='+codeResponse.access_token)
+  axios.get(link)
+  .then(response => {
+    console.log(response.data);
+
+    const query = 'SELECT * FROM user WHERE email = ?';
+    const values = [response.data.email];
+    connection.query(query, values, (error: any, result: any) => {
+      if (error) {
+        console.error('Error executing MySQL query: ' + error.stack);
+        res.status(500).json({ error: 'Unable to login' });
+      } else if (result.length === 0) {
+        res.status(401).json({ error: 'Invalid google account' });
+      } else {
+        res.json({ message: 'Login successful' });
+      }
+    });
+  })
+  .catch(error => {
+    console.log(error);
+  });
+  //console.log(data);
+});
+
+
+
+
+
+
 
 
 
