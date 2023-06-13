@@ -365,6 +365,85 @@ app.post('/cat/chatroom/post', (req: Request, res: Response) => {
 });
 
 
+// Endpoint for deleting an existing cat
+app.delete('/cats/chatroom/delete/:id', requireLogin, (req: express.Request, res: express.Response) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM chat_messages WHERE id = ?';
+  const values = [id];
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to delete text' });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ error: 'Text not found' }); 
+    } else {
+      res.status(200).send(`Text deleted successfully.`);
+    }
+  });
+});
+
+
+app.post('/cat/chatroom/get/staffname', (req: Request, res: Response) => {
+  const query = 'SELECT * FROM staff WHERE id = ?';
+  const { id } = req.body;
+  const values = [id];
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to fetch staff name' });
+    } else {
+      const staffs = result.map((staff: any) => {
+        return {
+          username: staff.username
+        };
+      });
+      // Remove null values from the array
+      const validstaff = staffs.filter((staff: any) => staff !== null);
+      // Return the array of cat objects with the data URLs
+      res.json(validstaff);
+    }
+  });
+}); 
+
+
+app.post('/cat/chatroom/get/username', (req: Request, res: Response) => {
+  const query = 'SELECT * FROM user WHERE id = ?';
+  const { id } = req.body;
+  const values = [id];
+
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to fetch staff name' });
+    } else {
+
+      const users = result.map((user: any) => {
+        return {
+          username: user.username
+        };
+      });
+      // Remove null values from the array
+      const validstaff = users.filter((user: any) => user !== null);
+      // Return the array of cat objects with the data URLs
+
+      res.json(validstaff);
+    }
+  });
+}); 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 // Start listening for requests
