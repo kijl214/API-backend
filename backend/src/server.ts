@@ -6,8 +6,6 @@ import { Request, Response, NextFunction } from 'express';
 import YAML from 'yamljs';
 import multer from 'multer';
 
-
-const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 const swaggerDocument = YAML.load('./openapi.yaml');
 const app = express();
@@ -171,7 +169,17 @@ app.post('/staff/login', (req: express.Request, res: express.Response) => {
     } else if (results.length === 0) {
       res.status(401).json({ error: 'Invalid username or password' });
     } else {
-      res.json({ message: 'Login successful' });
+      const staffs = results.map((staff: any) => {
+        return {
+          id: staff.id,
+          username: staff.username,
+          email: staff.email
+        };
+      });
+      // Remove null values from the array
+      const validstaff = staffs.filter((staff: any) => staff !== null);
+      // Return the array of cat objects with the data URLs
+      res.json(validstaff);
     }
   });
 });
@@ -206,7 +214,18 @@ app.post('/user/login', (req: express.Request, res: express.Response) => {
     } else if (results.length === 0) {
       res.status(401).json({ error: 'Invalid username or password' });
     } else {
-      res.json({ message: 'Login successful' });
+      const users = results.map((user: any) => {
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email
+        };
+      });
+
+      // Remove null values from the array
+      const validuser = users.filter((user: any) => user !== null);
+      // Return the array of cat objects with the data URLs
+      res.status(200).json(validuser);
     }
   });
 });
@@ -236,7 +255,7 @@ app.post('/user/signup/google', (req: express.Request, res: express.Response) =>
   const link = ('https://www.googleapis.com/oauth2/v3/userinfo?access_token='+codeResponse.access_token)
   axios.get(link)
   .then(response => {
-    console.log(response.data);
+    //console.log(response.data);
 
     const query = 'INSERT INTO user (username, email) VALUES (?, ?)';
     const values = [response.data.name, response.data.email];
@@ -258,14 +277,12 @@ app.post('/user/signup/google', (req: express.Request, res: express.Response) =>
 });
 
 
-
-// user login
+// user google login
 app.post('/user/login/google', (req: express.Request, res: express.Response) => {
   const { codeResponse } = req.body;
   const link = ('https://www.googleapis.com/oauth2/v3/userinfo?access_token='+codeResponse.access_token)
   axios.get(link)
   .then(response => {
-    console.log(response.data);
 
     const query = 'SELECT * FROM user WHERE email = ?';
     const values = [response.data.email];
@@ -276,7 +293,17 @@ app.post('/user/login/google', (req: express.Request, res: express.Response) => 
       } else if (result.length === 0) {
         res.status(401).json({ error: 'Invalid google account' });
       } else {
-        res.json({ message: 'Login successful' });
+        const users = result.map((user: any) => {
+          return {
+            id: user.id,
+            username: user.username,
+            email: user.email
+          };
+        });
+        // Remove null values from the array
+        const validuser = users.filter((user: any) => user !== null);
+        // Return the array of cat objects with the data URLs
+        res.json(validuser);
       }
     });
   })
@@ -291,6 +318,51 @@ app.post('/user/login/google', (req: express.Request, res: express.Response) => 
 
 
 
+app.post('/cat/chatroom/get', (req: Request, res: Response) => {
+  const query = 'SELECT * FROM chat_messages WHERE cat_id = ?';
+  const { id } = req.body;
+  const values = [id];
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to fetch chat messages' });
+    } else {
+      const messages = result.map((chat: any) => {
+        return {
+          id: chat.id,
+          cat_id: chat.cat_id,
+          user_id: chat.user_id,
+          staff_id: chat.staff_id,
+          text: chat.text
+        };
+      });
+      // Remove null values from the array
+      const validmessages = messages.filter((message: any) => message !== null);
+      // Return the array of cat objects with the data URLs
+      res.json(validmessages);
+    }
+  });
+});
+
+
+
+
+app.post('/cat/chatroom/post', (req: Request, res: Response) => {
+  const query = 'INSERT INTO chat_messages (text, cat_id, staff_id, user_id) VALUES (?, ?, ?, ?)';
+  const { text,id,staff_id,user_id } = req.body;
+  
+  const value = [text,id,staff_id,user_id];
+  connection.query(query, value, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to login' });
+    } else if (result.length === 0) {
+      res.status(401).json({ error: 'Invalid google account' });
+    } else {
+      res.json({ message: 'Login successful' });
+    }
+  });
+});
 
 
 
