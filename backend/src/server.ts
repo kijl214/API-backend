@@ -195,7 +195,7 @@ app.put('/staff/signup', (req: express.Request, res: express.Response) => {
       console.error('Error executing MySQL query: ' + error.stack);
       res.status(500).json({ error: 'Unable to update staff member' });
     } else if (result.affectedRows === 0) {
-      res.status(404).json({ error: 'Staff member not found' });
+      res.status(404).json({ error: 'Code not found' });
     } else {
       res.status(200).send(`Staff member Sign Up successfully.`);
     }
