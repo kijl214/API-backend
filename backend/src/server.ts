@@ -6,6 +6,7 @@ import { Request, Response, NextFunction } from 'express';
 import YAML from 'yamljs';
 import multer from 'multer';
 
+const bcrypt = require('bcrypt');
 const axios = require('axios');
 const swaggerDocument = YAML.load('./openapi.yaml');
 const app = express();
@@ -160,26 +161,33 @@ app.delete('/cats/delete/:id', requireLogin, (req: express.Request, res: express
 // Endpoint for staff login
 app.post('/staff/login', (req: express.Request, res: express.Response) => {
   const { username, password } = req.body;
-  const query = 'SELECT * FROM staff WHERE username = ? AND password = ?';
-  const values = [username, password];
-  connection.query(query, values, (error: any, results: any) => {
+  const query = 'SELECT * FROM staff WHERE username = ?';
+  const values = [username];
+  connection.query(query, values, async (error: any, results: any) => {
     if (error) {
       console.error('Error executing MySQL query: ' + error.stack);
       res.status(500).json({ error: 'Unable to login' });
     } else if (results.length === 0) {
       res.status(401).json({ error: 'Invalid username or password' });
     } else {
-      const staffs = results.map((staff: any) => {
-        return {
-          id: staff.id,
-          username: staff.username,
-          email: staff.email
-        };
-      });
-      // Remove null values from the array
-      const validstaff = staffs.filter((staff: any) => staff !== null);
-      // Return the array of cat objects with the data URLs
-      res.json(validstaff);
+      const staff = results[0];
+      try {
+        const match = await bcrypt.compare(password, staff.password);
+        if (match) {
+          // If the passwords match, return the staff member's details
+          const validstaff = {
+            id: staff.id,
+            username: staff.username
+          };
+          res.json(validstaff);
+        } else {
+          // If the passwords don't match, return an error message
+          res.status(401).json({ error: 'Invalid username or password' });
+        }
+      } catch (err:any) {
+        console.error('Error comparing passwords: ' + err.stack);
+        res.status(500).json({ error: 'Unable to login' });
+      }
     }
   });
 });
@@ -187,26 +195,34 @@ app.post('/staff/login', (req: express.Request, res: express.Response) => {
 
 // staff sign up
 app.put('/staff/signup', (req: express.Request, res: express.Response) => {
-  const { username, email, password, code, salt } = req.body;
-  const query = 'UPDATE staff SET username = ?, email = ?, password = ?, salt = ?, code = NULL WHERE code = ?';
-  const values = [username, email, password, salt, code];
-  connection.query(query, values, (error: any, result: any) => {
-    if (error) {
-      console.error('Error executing MySQL query: ' + error.stack);
-      res.status(500).json({ error: 'Unable to update staff member' });
-    } else if (result.affectedRows === 0) {
-      res.status(404).json({ error: 'Code not found' });
+  const { username, email, password, code } = req.body;
+  bcrypt.hash(password, 10, (err, hash) => {
+    if (err) {
+      console.error('Error generating password hash: ' + err.stack);
+      res.status(500).json({ error: 'Unable to create staff member' });
     } else {
-      res.status(200).send(`Staff member Sign Up successfully.`);
+      const query = 'UPDATE staff SET username = ?, email = ?, password = ?, code = NULL WHERE code = ?';
+      const values = [username, email, hash, code];
+      connection.query(query, values, (error: any, result: any) => {
+        if (error) {
+          console.error('Error executing MySQL query: ' + error.stack);
+          res.status(500).json({ error: 'Unable to update staff member' });
+        } else if (result.affectedRows === 0) {
+          res.status(404).json({ error: 'Code not found' });
+        } else {
+          res.status(200).send(`Staff member Sign Up successfully.`);
+        }
+      });
     }
   });
 });
 
+
 // user login
 app.post('/user/login', (req: express.Request, res: express.Response) => {
   const { username, password } = req.body;
-  const query = 'SELECT * FROM user WHERE username = ? AND password = ?';
-  const values = [username, password];
+  const query = 'SELECT * FROM user WHERE username = ?';
+  const values = [username];
   connection.query(query, values, (error: any, results: any) => {
     if (error) {
       console.error('Error executing MySQL query: ' + error.stack);
@@ -214,18 +230,23 @@ app.post('/user/login', (req: express.Request, res: express.Response) => {
     } else if (results.length === 0) {
       res.status(401).json({ error: 'Invalid username or password' });
     } else {
-      const users = results.map((user: any) => {
-        return {
-          id: user.id,
-          username: user.username,
-          email: user.email
-        };
-      });
+      const user = results[0];
 
-      // Remove null values from the array
-      const validuser = users.filter((user: any) => user !== null);
-      // Return the array of cat objects with the data URLs
-      res.status(200).json(validuser);
+      bcrypt.compare(password, user.password, (err:any, result:any) => {
+        if (err) {
+          console.error('Error comparing passwords: ' + err.stack);
+          res.status(500).json({ error: 'Unable to verify password' });
+        } else if (!result) {
+          res.status(401).json({ error: 'Invalid username or password 2' });
+        } else {
+          // Password is correct
+          const validuser = {
+            id: user.id,
+            username: user.username
+          };
+          res.status(200).json(validuser);
+        }
+      });
     }
   });
 });
@@ -233,17 +254,26 @@ app.post('/user/login', (req: express.Request, res: express.Response) => {
 
 // user sign up
 app.post('/user/signup', (req: express.Request, res: express.Response) => {
-  const { username, email, password, code, salt } = req.body;
-  const query = 'INSERT INTO user (username, email, password) VALUES (?, ?, ?)';
-  const values = [username, email, password];
-  connection.query(query, values, (error: any, result: any) => {
-    if (error) {
-      console.error('Error executing MySQL query: ' + error.stack);
-      res.status(500).json({ error: 'Unable to update user member' });
-    } else if (result.affectedRows === 0) {
-      res.status(404).json({ error: 'User member not found' });
+  const { username, email, password, code } = req.body;
+  
+  // Hash the password
+  bcrypt.hash(password, 10, (err, hash) => {
+    if (err) {
+      console.error('Error hashing password: ' + err.stack);
+      res.status(500).json({ error: 'Unable to hash password' });
     } else {
-      res.status(200).send(`User member Sign Up successfully.`);
+      const query = 'INSERT INTO user (username, email, password) VALUES (?, ?, ?)';
+      const values = [username, email, hash]; // Store the hash instead of the plain password
+      connection.query(query, values, (error: any, result: any) => {
+        if (error) {
+          console.error('Error executing MySQL query: ' + error.stack);
+          res.status(500).json({ error: 'Unable to update user member' });
+        } else if (result.affectedRows === 0) {
+          res.status(404).json({ error: 'User member not found' });
+        } else {
+          res.status(200).send(`User member Sign Up successfully.`);
+        }
+      });
     }
   });
 });
