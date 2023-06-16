@@ -464,15 +464,79 @@ app.post('/cat/chatroom/get/username', (req: Request, res: Response) => {
 
 
 
+// Endpoint for adding a new cat to the database
+app.post('/cats/favourite_cat/post', upload.single('image'), async (req, res) => {
+  const { catid, userid, name, age, breed } = req.body;
+  const image = req.file ? req.file.buffer : null; // Check if req.file exists before accessing the buffer property
+
+  try {
+    const query = 'INSERT INTO favourite_cat (catid, userid, name, age, breed, image) VALUES (?, ?, ?, ?, ?, ?)';
+    const values = [catid, userid, name, age, breed, image];
+    await connection.query(query, values);
+    res.status(200).json({ message: 'Cat added successfully' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+
+// Endpoint for getting all cats from the database
+app.post('/cats/favourite_cat/get', (req: express.Request, res: express.Response) => {
+  const { user_id } = req.body;
+  const query = 'SELECT * FROM favourite_cat where userid = ?';
+  const values = [user_id];
+  connection.query(query,values, (error: any, results: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to retrieve cats' });
+    } else {
+      // Loop through the results and process each row
+      const cats = results.map((cat: any) => {
+        if (!cat.image) {
+          console.error('Error: image data is missing for cat ' + cat.id);
+          return null;
+        }
+        // Convert the binary data to a base64-encoded string
+        const base64String = Buffer.from(cat.image).toString('base64');
+        // Create a data URL from the base64-encoded string
+        const dataUrl = `data:image/jpeg;base64,${base64String}`;
+        // Return a new object with the data URL
+        return {
+          id: cat.id,
+          catid: cat.catid,
+          name: cat.name,
+          age:cat.age,
+          breed:cat.breed,
+          picture: dataUrl
+        };
+      });
+      // Remove null values from the array
+      const validCats = cats.filter((cat: any) => cat !== null);
+      
+      // Return the array of cat objects with the data URLs
+      res.json(validCats);
+    }
+  });
+});
 
 
 
-
-
-
-
-
-
+app.delete('/cats/favourite_cat/delete/:id', (req: Request, res: Response) => {
+  const { id } = req.params;
+  const query = 'DELETE FROM favourite_cat WHERE id = ?';
+  const values = [id];
+  connection.query(query, values, (error: any, result: any) => {
+    if (error) {
+      console.error('Error executing MySQL query: ' + error.stack);
+      res.status(500).json({ error: 'Unable to delete cat' });
+    } else if (result.affectedRows === 0) {
+      res.status(404).json({ error: 'Cat not found' });
+    } else {
+      res.status(200).send(`Item ${id} deleted successfully.`);
+    }
+  });
+});
 
 
 
