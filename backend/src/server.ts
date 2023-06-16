@@ -544,3 +544,5 @@ app.delete('/cats/favourite_cat/delete/:id', (req: Request, res: Response) => {
 app.listen(3001, () => {
   console.log('Server listening on port 3001');
 });
+
+export default app;
