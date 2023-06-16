@@ -28,8 +28,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    description: The error message.
-
+                    description: Can't not get the cat.
   /cats/post:
     post:
       summary: Add a new cat
@@ -60,7 +59,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    description: The error message.
+                    description: Can't not create the cat.
 components:
   schemas:
     Cat:
@@ -109,7 +108,7 @@ components:
                 properties:
                   error:
                     type: string
-                    description: The error message.
+                    description: Cat not found
         '500':
           description: Internal Server Error
           content:
@@ -119,7 +118,7 @@ components:
                 properties:
                   error:
                     type: string
-                    description: The error message.
+                    description: Unable to update cat
 
   /cats/delete/{id}:
     delete:
@@ -144,7 +143,7 @@ components:
                 properties:
                   error:
                     type: string
-                    description: The error message.
+                    description: Cat not found
         '500':
           description: Internal Server Error
           content:
@@ -154,7 +153,7 @@ components:
                 properties:
                   error:
                     type: string
-                    description: The error message.
+                    description: Unable to delete cat
 components:
   schemas:
     Cat:
@@ -196,6 +195,7 @@ components:
           description: Unauthorized
         500:
           description: Internal Server Error
+
   /staff/signup:
     post:
       summary: Staff sign up
@@ -226,3 +226,346 @@ components:
           description: Unauthorized
         500:
           description: Internal Server Error
+
+  /user/login:
+    post:
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  username:
+                    type: string
+        401:
+          description: Invalid username or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Unable to login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /user/signup:
+    post:
+      summary: Sign up user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        200:
+          description: User signed up successfully
+          content:
+            text/plain:
+              schema:
+                type: string
+        404:
+          description: User member not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Unable to update user member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+
+  /user/signup/google:
+    post:
+      summary: Sign up user with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                codeResponse:
+                  type: object
+                  properties:
+                    access_token:
+                      type: string
+      responses:
+        200:
+          description: User signed up successfully with Google
+          content:
+            text/plain:
+              schema:
+                type: string
+        404:
+          description: User member not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Unable to update user member
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /user/login/google:
+    post:
+      summary: Login user with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                codeResponse:
+                  type: object
+                  properties:
+                    access_token:
+                      type: string
+      responses:
+        200:
+          description: User logged in successfully with Google
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    username:
+                      type: string
+                    email:
+                      type: string
+        401:
+          description: Invalid Google account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+        500:
+          description: Unable to login
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+  /cat/chatroom/get:
+    post:
+      summary: Get chat messages for a cat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: The ID of the cat
+              required:
+                - id
+      responses:
+        '200':
+          description: A JSON array of chat message objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                      description: The ID of the chat message
+                    cat_id:
+                      type: integer
+                      description: The ID of the cat associated with the message
+                    user_id:
+                      type: integer
+                      description: The ID of the user who sent the message
+                    staff_id:
+                      type: integer
+                      description: The ID of the staff who sent the message
+                    text:
+                      type: string
+                      description: The text of the chat message
+
+          
+  /cat/chatroom/post:
+    post:
+      summary: Post a new chat message for a cat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: The ID of the cat
+                staff_id:
+                  type: integer
+                  description: The ID of the staff who sent the message
+                user_id:
+                  type: integer
+                  description: The ID of the user who sent the message
+                text:
+                  type: string
+                  description: The text of the chat message
+              required:
+                - id
+                - staff_id
+                - user_id
+                - text
+      responses:
+        '200':
+          description: success post a new chat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: success post a new chat
+
+          
+  /cats/chatroom/delete/{id}:
+    delete:
+      summary: Delete a chat message by ID
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the chat message to delete
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: success to delete the chat message
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: success post a new chat
+
+          
+  /cat/chatroom/get/staffname:
+    post:
+      summary: Get the name of a staff member by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: The ID of the staff member
+              required:
+                - id
+      responses:
+        '200':
+          description: A JSON array with the staff member's username
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                      description: The username of the staff member
+
+          
+  /cat/chatroom/get/username:
+    post:
+      summary: Get the name of a user by ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  description: The ID of the user
+              required:
+                - id
+      responses:
+        '200':
+          description: A JSON array with the user's username
+          content:
+            application/json:
+              schema:
+                type:array
+                items:
+                  type: object
+                  properties:
+                    username:
+                      type: string
+                      description: The username of the user
